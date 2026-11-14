@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小组计分板</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: linear-gradient(135deg, #283593 0%, #3949ab 55%, #5c6bc0 100%);
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: flex-start; padding: 2.5vh 3vw;
+    color: #fff; user-select: none;
+  }
+  h1 { font-size: 3vmax; margin-bottom: .8vh; letter-spacing: .3em; text-shadow: 0 2px 8px rgba(0,0,0,.4); }
+  .subtitle { font-size: 1.25vmax; opacity: .75; margin-bottom: 2.2vh; }
+  .board {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1.6vw; width: min(1100px, 94vw); margin-bottom: 2.2vh;
+  }
+  .team {
+    background: rgba(255,255,255,.1); backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,.22); border-radius: 20px;
+    padding: 2vh 1.2vw; text-align: center; position: relative;
+    box-shadow: 0 10px 32px rgba(0,0,0,.28);
+    transition: transform .18s, box-shadow .18s;
+  }
+  .team:hover { transform: translateY(-4px); }
+  .team.leading { border: 2px solid #ffca28; box-shadow: 0 0 32px rgba(255,202,40,.45); }
+  .team-name {
+    font-size: 1.7vmax; font-weight: 800; margin-bottom: 1.2vh;
+    cursor: pointer; padding: .25em .6em; border-radius: 10px;
+    display: inline-block;
+  }
+  .team-name:hover { background: rgba(255,255,255,.14); }
+  .score {
+    font-size: 5.6vmax; font-weight: 900; color: #ffca28;
+    line-height: 1.05; text-shadow: 0 4px 20px rgba(255,202,40,.5);
+    margin: .6vh 0 1.4vh; font-variant-numeric: tabular-nums;
+  }
+  .ctrl { display: flex; gap: .5vw; justify-content: center; flex-wrap: wrap; }
+  .pt-btn {
+    border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.15);
+    color: #fff; font-family: inherit; font-weight: 700; cursor: pointer;
+    border-radius: 12px; padding: .5em .9em; font-size: 1.35vmax;
+    transition: background .15s, transform .12s;
+  }
+  .pt-btn:hover { background: rgba(255,255,255,.3); transform: scale(1.06); }
+  .pt-btn.plus { background: rgba(105,240,174,.2); border-color: rgba(105,240,174,.5); }
+  .pt-btn.minus { background: rgba(255,105,135,.18); border-color: rgba(255,105,135,.45); }
+  .toolbar { display: flex; gap: 1vw; flex-wrap: wrap; justify-content: center; }
+  .btn {
+    border: none; cursor: pointer; font-family: inherit; font-weight: 700;
+    border-radius: 999px; padding: .6em 1.9em; font-size: 1.3vmax;
+    background: rgba(255,255,255,.18); color: #fff; border: 1px solid rgba(255,255,255,.3);
+    transition: transform .15s, background .15s;
+  }
+  .btn:hover { transform: translateY(-2px); background: rgba(255,255,255,.3); }
+  .medal { position: absolute; top: -1.2vh; right: 1vw; font-size: 2.4vmax; filter: drop-shadow(0 2px 6px rgba(0,0,0,.4)); }
+  .footer-tip { margin-top: 2vh; font-size: 1.05vmax; opacity: .55; text-align: center; }
+  .popup-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none;
+    align-items: center; justify-content: center; z-index: 10;
+  }
+  .popup-mask.show { display: flex; }
+  .popup {
+    background: #fff; color: #283593; border-radius: 18px; padding: 2em 2.4em;
+    width: min(480px, 90vw); text-align: center;
+  }
+  .popup h3 { margin-bottom: 1em; font-size: 1.5em; }
+  .popup input {
+    width: 100%; padding: .7em 1em; font-size: 1.2em; border: 2px solid #c5cae9;
+    border-radius: 12px; outline: none; font-family: inherit; color: #283593;
+  }
+  .popup input:focus { border-color: #3949ab; }
+  .popup .row { display: flex; gap: .8em; margin-top: 1.4em; }
+  .popup button {
+    flex: 1; padding: .7em; border: none; border-radius: 12px; font-family: inherit;
+    font-size: 1.05em; font-weight: 700; cursor: pointer;
+  }
+  .popup .ok { background: #3949ab; color: #fff; }
+  .popup .cancel { background: #e8eaf6; color: #3949ab; }
+</style>
+</head>
+<body>
+<h1>小组计分板</h1>
+<div class="subtitle">点击组名可改名 · 分数自动保存 · 刷新不丢失</div>
+
+<div class="board" id="board"></div>
+
+<div class="toolbar">
+  <button class="btn" id="btnAdd">+ 添加小组</button>
+  <button class="btn" id="btnReset">全部清零</button>
+</div>
+
+<div class="footer-tip">单文件网页 · 断网可用 · 保存本页到 U 盘即可带走</div>
+
+<div class="popup-mask" id="popupMask">
+  <div class="popup">
+    <h3 id="popupTitle">小组改名</h3>
+    <input id="popupInput" maxlength="12" placeholder="输入新组名">
+    <div class="row">
+      <button class="cancel" id="popupCancel">取消</button>
+      <button class="ok" id="popupOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DEFAULT = [
+    { name: '第一组', score: 0 },
+    { name: '第二组', score: 0 },
+    { name: '第三组', score: 0 },
+    { name: '第四组', score: 0 }
+  ];
+  var board = document.getElementById('board');
+  var teams = [];
+  var editIdx = -1;
+
+  function load() {
+    try {
+      var s = localStorage.getItem('scoreboard');
+      if (s) { teams = JSON.parse(s); return; }
+    } catch (e) {}
+    teams = JSON.parse(JSON.stringify(DEFAULT));
+  }
+  function save() { try { localStorage.setItem('scoreboard', JSON.stringify(teams)); } catch (e) {} }
+
+  function maxScore() {
+    if (teams.length === 0) return null;
+    return Math.max.apply(null, teams.map(function (t) { return t.score; }));
+  }
+
+  function render() {
+    var top = maxScore();
+    var hasPositive = top !== null && top > 0;
+    board.innerHTML = teams.map(function (t, i) {
+      var lead = hasPositive && t.score === top ? ' leading' : '';
+      var medal = hasPositive && t.score === top ? '<div class="medal">🏆</div>' : '';
+      return '<div class="team' + lead + '">' + medal +
+        '<div class="team-name" data-i="' + i + '" title="点击改名">' + esc(t.name) + '</div>' +
+        '<div class="score">' + t.score + '</div>' +
+        '<div class="ctrl">' +
+          '<button class="pt-btn plus" data-i="' + i + '" data-d="1">+1</button>' +
+          '<button class="pt-btn plus" data-i="' + i + '" data-d="2">+2</button>' +
+          '<button class="pt-btn plus" data-i="' + i + '" data-d="5">+5</button>' +
+          '<button class="pt-btn minus" data-i="' + i + '" data-d="-1">−1</button>' +
+          '<button class="pt-btn" data-i="' + i + '" data-d="del" style="font-size:1.05vmax;opacity:.75">删除</button>' +
+        '</div></div>';
+    }).join('');
+    save();
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  board.addEventListener('click', function (e) {
+    var t = e.target;
+    if (t.classList.contains('pt-btn')) {
+      var i = +t.dataset.i, d = t.dataset.d;
+      if (d === 'del') { teams.splice(i, 1); render(); return; }
+      teams[i].score += +d;
+      render();
+    } else if (t.classList.contains('team-name')) {
+      editIdx = +t.dataset.i;
+      document.getElementById('popupTitle').textContent = '小组改名';
+      document.getElementById('popupInput').value = teams[editIdx].name;
+      document.getElementById('popupMask').classList.add('show');
+      document.getElementById('popupInput').focus();
+    }
+  });
+
+  document.getElementById('btnAdd').addEventListener('click', function () {
+    var n = teams.length + 1;
+    var names = ['一','二','三','四','五','六','七','八','九','十'];
+    teams.push({ name: '第' + (names[n-1] || n) + '组', score: 0 });
+    render();
+  });
+
+  document.getElementById('btnReset').addEventListener('click', function () {
+    if (confirm('确定把所有小组分数清零吗？')) {
+      teams.forEach(function (t) { t.score = 0; });
+      render();
+    }
+  });
+
+  document.getElementById('popupOk').addEventListener('click', function () {
+    var v = document.getElementById('popupInput').value.trim();
+    if (v && editIdx >= 0) teams[editIdx].name = v;
+    document.getElementById('popupMask').classList.remove('show');
+    render();
+  });
+  document.getElementById('popupCancel').addEventListener('click', function () {
+    document.getElementById('popupMask').classList.remove('show');
+  });
+  document.getElementById('popupInput').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('popupOk').click();
+  });
+
+  load();
+  render();
+})();
+</script>
+</body>
+</html>

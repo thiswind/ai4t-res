@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>古诗文默写抽背卡</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 3vh 3vw; user-select: none; color: #2c2620;
+  font-family: "STSong", "SimSun", "Songti SC", serif;
+  background: #f5f0e1;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255,252,240,.75), rgba(224,212,178,.55));
+}
+header { display: flex; align-items: center; gap: 16px; margin-bottom: 1.4vh; }
+.seal {
+  width: 46px; height: 46px; background: #a83a2b; color: #f8f2e4; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center; font-size: 27px;
+  transform: rotate(-5deg); box-shadow: 0 3px 10px rgba(120, 40, 25, .35);
+}
+h1 { font-size: clamp(22px, 3.6vmin, 34px); letter-spacing: .26em; font-weight: 700; }
+.round-tag {
+  font-size: 13px; color: #8a7a55; border: 1px solid #c9bb92; border-radius: 999px;
+  padding: 3px 14px; letter-spacing: .18em; background: rgba(255, 252, 243, .6);
+}
+.stats { font-size: 15px; color: #6d5f42; letter-spacing: .08em; margin-bottom: 1.8vh; }
+.stats b { color: #2c2620; font-size: 19px; }
+.card {
+  position: relative; width: min(720px, 94vw); min-height: 46vh; background: #faf6ea;
+  border: 1px solid #d8cba4; border-radius: 4px; cursor: pointer;
+  box-shadow: inset 0 0 0 8px #faf6ea, inset 0 0 0 9px #d3c397, 0 14px 38px rgba(70, 55, 25, .14);
+  padding: 5vh 5vw 3.6vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.2vh;
+}
+.upper { font-size: clamp(24px, 4.6vmin, 40px); letter-spacing: .12em; line-height: 1.65; text-align: center; }
+.lower {
+  font-size: clamp(22px, 4vmin, 34px); color: #3a332a; letter-spacing: .12em; line-height: 1.65;
+  text-align: center; border-top: 1px dashed #cbbb8e; padding-top: 2.2vh; min-width: 60%;
+}
+.trap { display: flex; flex-direction: column; align-items: center; gap: 1.1vh; }
+.trap-label { font-size: 14px; letter-spacing: .5em; text-indent: .5em; color: #8a7a55; }
+.trap-char {
+  font-size: clamp(42px, 9vmin, 76px); color: #a83a2b; font-weight: 700; line-height: 1.28;
+  border: 4px solid #a83a2b; border-radius: 50%; padding: .02em .24em;
+}
+.trap-note { font-size: 17px; color: #a83a2b; letter-spacing: .1em; }
+.judge { display: flex; gap: 24px; }
+.btn {
+  font-family: inherit; font-size: 17px; letter-spacing: .12em; cursor: pointer;
+  padding: .5em 1.7em; background: #f3ecd8; color: #2c2620; border: 1px solid #b9a878;
+  border-radius: 3px; transition: transform .15s, background .15s;
+}
+.btn:hover { background: #e9dfc2; transform: translateY(-2px); }
+.btn:disabled { opacity: .4; cursor: default; transform: none; }
+.btn.ok { color: #2f5d3a; border-color: #7fa386; }
+.btn.bad { color: #a83a2b; border-color: #c78a7d; }
+.tip { font-size: 13.5px; color: #9b8b64; letter-spacing: .1em; text-align: center; }
+.done { text-align: center; display: none; flex-direction: column; gap: 2.6vh; align-items: center; }
+.done-title { font-size: clamp(24px, 4.4vmin, 38px); letter-spacing: .3em; text-indent: .3em; }
+.done-line { font-size: clamp(18px, 3.2vmin, 28px); color: #3a332a; letter-spacing: .1em; }
+.done-btns { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+footer { margin-top: 2.2vh; font-size: 12.5px; color: #a29272; letter-spacing: .12em; }
+</style>
+</head>
+<body>
+<header>
+  <div class="seal">默</div>
+  <h1>古诗文默写 · 抽背卡</h1>
+  <div class="round-tag" id="roundTag">整本抽背</div>
+</header>
+
+<div class="stats" id="stats">第 <b id="qNo">0</b> / <span id="qTotal">0</span> 题&nbsp;&nbsp;·&nbsp;&nbsp;对 <b id="okN">0</b>&nbsp;&nbsp;·&nbsp;&nbsp;错 <b id="badN">0</b></div>
+
+<div class="card" id="card">
+  <div class="upper" id="upper">点击卡片 或 按空格，开始抽题</div>
+  <div class="lower" id="lower"></div>
+  <div class="trap" id="trap">
+    <div class="trap-label">易错字</div>
+    <div class="trap-char" id="trapChar"></div>
+    <div class="trap-note" id="trapNote"></div>
+  </div>
+  <div class="judge" id="judge">
+    <button class="btn ok" id="btnOk">✓ 对了（键 1）</button>
+    <button class="btn bad" id="btnBad">✗ 错了（键 2）</button>
+  </div>
+  <div class="tip" id="tip"></div>
+</div>
+
+<div class="done" id="done">
+  <div class="done-title">本轮完成</div>
+  <div class="done-line" id="doneLine"></div>
+  <div class="done-btns">
+    <button class="btn bad" id="btnRedo">错一遍再来</button>
+    <button class="btn" id="btnAll">全部再来一轮</button>
+  </div>
+</div>
+
+<footer>AI 技术赋能中职语文教学 · 2026-11-03 演示产物 · 条目可自行增删</footer>
+
+<script>
+(function () {
+"use strict";
+// ▼▼ 条目库格式：每条一行 ["上半句（含标点）","下半句（含标点）","易错字（可加括号提示，如：知（通「智」））"]
+// ▲▲ 教师可直接增删或修改条目（一行一条），改完保存文件、刷新页面即生效
+var CARDS = [
+  ["锲而不舍，", "金石可镂。", "镂"],
+  ["不积跬步，", "无以至千里。", "至（易误写成「致」）"],
+  ["青，取之于蓝，", "而青于蓝。", "于"],
+  ["木直中绳，", "輮以为轮，其曲中规。", "輮"],
+  ["虽有槁暴，", "不复挺者。", "槁"],
+  ["君子博学而日参省乎己，", "则知明而行无过矣。", "知（通「智」）"],
+  ["君子生非异也，", "善假于物也。", "生（通「性」）"],
+  ["驽马十驾，", "功在不舍。", "驾"],
+  ["蚓无爪牙之利，", "筋骨之强。", "爪"],
+  ["假舟楫者，", "非能水也，而绝江河。", "楫"],
+  ["静女其姝，", "俟我于城隅。", "姝"],
+  ["爱而不见，", "搔首踟蹰。", "踟蹰"],
+  ["自牧归荑，", "洵美且异。", "荑"],
+  ["匪女之为美，", "美人之贻。", "贻"],
+  ["涉江采芙蓉，", "兰泽多芳草。", "芙蓉"],
+  ["还顾望旧乡，", "长路漫浩浩。", "漫"]
+];
+
+var $ = function (id) { return document.getElementById(id); };
+var card = $("card"), upper = $("upper"), lower = $("lower"),
+    trap = $("trap"), trapChar = $("trapChar"), trapNote = $("trapNote"),
+    judge = $("judge"), tip = $("tip"),
+    doneBox = $("done"), doneLine = $("doneLine"),
+    stats = $("stats"), qNo = $("qNo"), qTotal = $("qTotal"), okN = $("okN"), badN = $("badN"),
+    roundTag = $("roundTag");
+
+var queue = [], wrong = [], cur = -1, stage = 0, ok = 0, bad = 0, no = 0, total = 0, mode = "ready";
+
+function shuffle(a) {
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
+function allIdx() { var a = []; for (var i = 0; i < CARDS.length; i++) a.push(i); return a; }
+
+function startRound(list, tag) {
+  queue = shuffle(list.slice()); wrong = []; ok = 0; bad = 0; no = 0; total = queue.length;
+  roundTag.textContent = tag;
+  doneBox.style.display = "none"; card.style.display = "flex"; stats.style.visibility = "visible";
+  mode = "run"; next();
+}
+function next() {
+  if (!queue.length) { finish(); return; }
+  cur = queue.shift(); no++; stage = 0;
+  upper.textContent = cur[0];
+  lower.textContent = cur[1];
+  var parts = cur[2].split("（");
+  trapChar.textContent = parts[0];
+  trapNote.textContent = parts.length > 1 ? "（" + parts.slice(1).join("（") : "";
+  lower.style.visibility = "hidden"; trap.style.visibility = "hidden"; judge.style.visibility = "hidden";
+  tip.textContent = "学生在心中 / 纸上默出下半句 → 按 空格 或 点击卡片揭晓";
+  qNo.textContent = no; qTotal.textContent = total; okN.textContent = ok; badN.textContent = bad;
+}
+function advance() {
+  if (mode === "ready") { startRound(allIdx(), "整本抽背"); return; }
+  if (mode !== "run" || stage >= 2) return;
+  stage++;
+  if (stage === 1) {
+    lower.style.visibility = "visible";
+    tip.textContent = "再按一次 空格 / 点击，亮出易错字";
+  } else {
+    trap.style.visibility = "visible"; judge.style.visibility = "visible";
+    tip.textContent = "请判定：键 1 / 「对了」→ 下一题　键 2 / 「错了」→ 计入重练";
+  }
+}
+function mark(good) {
+  if (mode !== "run" || stage !== 2) return;
+  if (good) ok++; else { bad++; wrong.push(cur); }
+  okN.textContent = ok; badN.textContent = bad;
+  next();
+}
+function finish() {
+  mode = "done"; card.style.display = "none"; doneBox.style.display = "flex";
+  var pct = total ? Math.round(ok / total * 100) : 0;
+  doneLine.textContent = "共 " + total + " 题 · 对 " + ok + " · 错 " + bad + " · 正确率 " + pct + "%";
+  $("btnRedo").textContent = "错一遍再来（" + wrong.length + " 题）";
+  $("btnRedo").disabled = wrong.length === 0;
+}
+
+card.addEventListener("click", advance);
+$("btnOk").addEventListener("click", function (e) { e.stopPropagation(); mark(true); });
+$("btnBad").addEventListener("click", function (e) { e.stopPropagation(); mark(false); });
+$("btnRedo").addEventListener("click", function () {
+  if (wrong.length) startRound(wrong.slice(), "错题重练");
+});
+$("btnAll").addEventListener("click", function () { startRound(allIdx(), "整本抽背"); });
+document.addEventListener("keydown", function (e) {
+  if (e.code === "Space" || e.key === "Enter") { e.preventDefault(); advance(); }
+  else if (e.key === "1" || e.key === "ArrowRight") { mark(true); }
+  else if (e.key === "2" || e.key === "ArrowLeft") { mark(false); }
+});
+
+lower.style.visibility = "hidden"; trap.style.visibility = "hidden"; judge.style.visibility = "hidden";
+stats.style.visibility = "hidden";
+tip.textContent = "共 " + CARDS.length + " 条 · 出自《劝学》《静女》《涉江采芙蓉》";
+})();
+</script>
+</body>
+</html>
